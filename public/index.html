@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Email Scheduler with Auth</title>
+<style>
+  body {
+    background: #0b0c10;
+    color: #66fcf1;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 20px;
+    max-width: 600px;
+    margin: auto;
+  }
+  h1 {
+    text-align: center;
+    color: #45a29e;
+    margin-bottom: 10px;
+  }
+  form {
+    background: #1f2833;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+  }
+  label {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+  }
+  input, textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: none;
+    border-radius: 4px;
+    background: #45a29e;
+    color: #0b0c10;
+    font-weight: bold;
+  }
+  button {
+    background: #66fcf1;
+    border: none;
+    color: #0b0c10;
+    font-weight: bold;
+    padding: 10px 15px;
+    margin-top: 15px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+  }
+  button:hover {
+    background: #45a29e;
+    color: #c5c6c7;
+  }
+  #status {
+    margin-top: 10px;
+    font-weight: bold;
+  }
+  #logoutBtn {
+    background: #c62828;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Email Scheduler</h1>
+
+<!-- Registration -->
+<div id="registerDiv">
+  <form id="registerForm">
+    <h2>Register</h2>
+    <label for="regUsername">Username:</label>
+    <input type="text" id="regUsername" required />
+    <label for="regPassword">Password:</label>
+    <input type="password" id="regPassword" required />
+    <button type="submit">Register</button>
+  </form>
+</div>
+
+<!-- Login -->
+<div id="loginDiv">
+  <form id="loginForm">
+    <h2>Login</h2>
+    <label for="loginUsername">Username:</label>
+    <input type="text" id="loginUsername" required />
+    <label for="loginPassword">Password:</label>
+    <input type="password" id="loginPassword" required />
+    <button type="submit">Login</button>
+  </form>
+</div>
+
+<!-- Logged in user display and logout -->
+<div id="userArea" style="display:none;">
+  <p>Logged in as: <span id="usernameDisplay"></span></p>
+  <button id="logoutBtn">Logout</button>
+</div>
+
+<!-- Email Form -->
+<div id="emailDiv" style="display:none;">
+  <form id="emailForm">
+    <h2>Send / Schedule Email</h2>
+    <label for="emailTo">To:</label>
+    <input type="email" id="emailTo" required />
+
+    <label for="emailSubject">Subject:</label>
+    <input type="text" id="emailSubject" required />
+
+    <label for="emailContent">Content:</label>
+    <textarea id="emailContent" rows="5" required></textarea>
+
+    <label for="emailScheduledTime">Schedule Time (optional, YYYY-MM-DDTHH:mm):</label>
+    <input type="datetime-local" id="emailScheduledTime" />
+
+    <button type="submit">Send / Schedule</button>
+  </form>
+</div>
+
+<!-- Status Messages -->
+<div id="status"></div>
+
+<script>
+  const apiBase = 'http://localhost:3000';
+
+  // Show/hide areas based on login state
+  function setLoggedIn(username) {
+    document.getElementById('registerDiv').style.display = 'none';
+    document.getElementById('loginDiv').style.display = 'none';
+    document.getElementById('userArea').style.display = 'block';
+    document.getElementById('emailDiv').style.display = 'block';
+    document.getElementById('usernameDisplay').textContent = username;
+  }
+
+  function setLoggedOut() {
+    document.getElementById('registerDiv').style.display = 'block';
+    document.getElementById('loginDiv').style.display = 'block';
+    document.getElementById('userArea').style.display = 'none';
+    document.getElementById('emailDiv').style.display = 'none';
+    document.getElementById('usernameDisplay').textContent = '';
+  }
+
+  // Check if user is logged in by calling a protected route (emails)
+  async function checkLoggedIn() {
+    try {
+      const res = await fetch(`${apiBase}/emails`, {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        // If 200, user logged in
+        setLoggedIn('User');
+      } else {
+        setLoggedOut();
+      }
+    } catch {
+      setLoggedOut();
+    }
+  }
+
+  // Register form
+  document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
+
+    const res = await fetch(`${apiBase}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      setStatus('Registration successful! Please login.', 'green');
+      document.getElementById('registerForm').reset();
+    } else {
+      setStatus(data.error || 'Registration failed', 'red');
+    }
+  });
+
+  // Login form
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+
+    const res = await fetch(`${apiBase}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      setStatus('Login successful!', 'green');
+      setLoggedIn(username);
+      document.getElementById('loginForm').reset();
+    } else {
+      setStatus(data.error || 'Login failed', 'red');
+    }
+  });
+
+  // Logout button
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    const res = await fetch(`${apiBase}/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (res.ok) {
+      setStatus('Logged out.', 'green');
+      setLoggedOut();
+    } else {
+      setStatus('Logout failed', 'red');
+    }
+  });
+
+  // Send/Schedule Email form
+  document.getElementById('emailForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const to = document.getElementById('emailTo').value.trim();
+    const subject = document.getElementById('emailSubject').value.trim();
+    const content = document.getElementById('emailContent').value.trim();
+    const scheduledTime = document.getElementById('emailScheduledTime').value;
+
+    let endpoint = '';
+    let body = {};
+
+    if (scheduledTime) {
+      endpoint = '/schedule-email';
+      body = { recipient: to, subject, content, scheduledTime };
+    } else {
+      endpoint = '/send-email';
+      body = { to, subject, text: content };
+    }
+
+    const res = await fetch(apiBase + endpoint, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      setStatus(data.message || 'Email action successful', 'green');
+      document.getElementById('emailForm').reset();
+    } else {
+      setStatus(data.error || 'Email action failed', 'red');
+    }
+  });
+
+  // Utility to show status messages
+  function setStatus(msg, color) {
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = msg;
+    statusDiv.style.color = color;
+  }
+
+  // Initial check if logged in on page load
+  checkLoggedIn();
+</script>
+
+</body>
+</html>
