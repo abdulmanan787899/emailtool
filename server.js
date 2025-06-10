@@ -8,24 +8,23 @@ const cron = require('node-cron');
 
 const app = express();
 
-// CORS for local development and deployment
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://email-scheduler-7ekc.onrender.com'],
+  origin: 'http://localhost:3000',  // change or add your frontend URL for deployment
   credentials: true
 }));
 
 app.use(express.json());
-app.use(express.static('public')); // Serve frontend + assets
+app.use(express.static('public')); // serve frontend files from public folder
 
 // --- SESSION SETUP ---
 app.use(session({
-  secret: 'supersecretkey123!',
+  secret: 'supersecretkey123!',  // use env var in production
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 60 * 60 * 1000 } // 1 hour
 }));
 
-// --- USERS (in-memory for demo; replace with DB in production) ---
+// --- USERS (in-memory demo) ---
 const users = [];
 
 // --- EMAILS STORAGE ---
@@ -53,9 +52,8 @@ app.post('/login', (req, res) => {
   if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
 
   const user = users.find(u => u.username === username && u.password === password);
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
+  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
   req.session.user = { username };
   res.json({ message: 'Login successful', username });
 });
@@ -75,7 +73,6 @@ function authMiddleware(req, res, next) {
 
 app.post('/send-email', authMiddleware, (req, res) => {
   const { to, subject, text, from } = req.body;
-
   if (!to || !subject || !text) return res.status(400).json({ error: 'Missing required fields' });
 
   const mailOptions = {
@@ -112,7 +109,6 @@ app.post('/send-email', authMiddleware, (req, res) => {
 
 app.post('/schedule-email', authMiddleware, (req, res) => {
   const { sender, recipient, subject, content, scheduledTime } = req.body;
-
   if (!recipient || !subject || !content || !scheduledTime) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -139,21 +135,20 @@ app.get('/emails', authMiddleware, (req, res) => {
   res.json(emails);
 });
 
-// --- Email transporter ---
+// --- Nodemailer Transporter ---
 const transporter = nodemailer.createTransport({
   host: 'smtp.hostinger.com',
   port: 465,
   secure: true,
   auth: {
     user: 'info@growzin.com',
-    pass: 'Growzin786#' // IMPORTANT: use .env in production
+    pass: 'Growzin786#' // Use environment variables in production
   }
 });
 
-// --- Cron job for scheduled emails ---
+// --- Cron job to send scheduled emails every 10 seconds ---
 cron.schedule('*/10 * * * * *', () => {
   const now = new Date();
-
   emails.forEach((email, index) => {
     if (email.status === 'pending' && new Date(email.scheduledTime) <= now) {
       const mailOptions = {
@@ -180,8 +175,19 @@ cron.schedule('*/10 * * * * *', () => {
   });
 });
 
-// ✅ FINAL LINE — supports local and deployment
+// --- Serve frontend properly ---
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Fallback route for SPA routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// --- Start server ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

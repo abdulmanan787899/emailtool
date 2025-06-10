@@ -20,5 +20,13 @@
     "node-schedule": "^2.1.1",
     "nodemailer": "^7.0.3"
   },
-  "description": ""
+  "description": "This is a full-stack Email Scheduler tool built with Node.js and a frontend interface. It allows users to schedule emails, manage users, and send emails automatically.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abdulmanan787899/emailtool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/abdulmanan787899/emailtool/issues"
+  },
+  "homepage": "https://github.com/abdulmanan787899/emailtool#readme"
 }

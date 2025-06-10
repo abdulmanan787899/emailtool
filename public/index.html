@@ -1,29 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Email Scheduler</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container" id="app-page">
+    <h2>Schedule an Email</h2>
+    <input type="email" id="email-to" placeholder="Recipient email" />
+    <input type="text" id="email-subject" placeholder="Subject" />
+    <textarea id="email-content" placeholder="Email content"></textarea>
+    <input type="datetime-local" id="email-schedule-time" />
+    <button id="schedule-email-btn">Schedule Email</button>
 
-# Email Scheduler Project
+    <button id="logout-btn" style="margin-top:20px; background:#f44; color:#fff;">Logout</button>
 
-This is a full-stack Email Scheduler tool built with Node.js and a frontend interface.  
-It allows users to schedule emails, manage users, and send emails automatically.
+    <div id="notification" style="margin-top:15px;"></div>
+  </div>
 
-## Features
-
-- Schedule emails to be sent later
-- User management with signup and login (basic)
-- Frontend UI for creating and managing emails
-- Backend server with Node.js and Nodemailer
-- Email data stored in JSON files
-
-## Folder Structure
-
-- `email-scheduler/` — core scheduling logic and backend code  
-- `public/` — frontend files (HTML, CSS, JS)  
-- `server.js` — main Node.js backend server  
-- `emails.json` — stores scheduled emails  
-- `users.json` — stores user info  
-- `package.json` — Node.js dependencies and scripts  
-
-## Setup & Run
-
-1. Install dependencies:
-
-```bash
-npm install
+  <script src="script.js"></script>
+</body>
+</html>
