@@ -1,4 +1,3 @@
-
 # Email Scheduler Project
 
 This is a full-stack Email Scheduler tool built with Node.js and a frontend interface.  
