@@ -1,193 +1,126 @@
 const express = require('express');
 const session = require('express-session');
-const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
 const cron = require('node-cron');
+const cors = require('cors');
+const bodyParser = require('body-parser');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: 'http://localhost:3000',  // change or add your frontend URL for deployment
-  credentials: true
-}));
-
-app.use(express.json());
-app.use(express.static('public')); // serve frontend files from public folder
-
-// --- SESSION SETUP ---
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
-  secret: 'supersecretkey123!',  // use env var in production
+  secret: 'your_secret_key',
   resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 60 * 60 * 1000 } // 1 hour
+  saveUninitialized: true
 }));
 
-// --- USERS (in-memory demo) ---
-const users = [];
+// Simple user system (replace with a DB for production)
+const USERS_FILE = 'users.json';
+const EMAILS_FILE = 'emails.json';
 
-// --- EMAILS STORAGE ---
-const EMAIL_FILE = path.join(__dirname, 'emails.json');
-let emails = fs.existsSync(EMAIL_FILE) ? JSON.parse(fs.readFileSync(EMAIL_FILE)) : [];
+if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify([]));
+if (!fs.existsSync(EMAILS_FILE)) fs.writeFileSync(EMAILS_FILE, JSON.stringify([]));
 
-function saveEmails() {
-  fs.writeFileSync(EMAIL_FILE, JSON.stringify(emails, null, 2));
-}
+const readJSON = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
+const writeJSON = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2));
 
-// --- AUTH ROUTES ---
+// Login endpoint
+app.post('/api/login', (req, res) => {
+  const { email, password } = req.body;
+  const users = readJSON(USERS_FILE);
+  const user = users.find(u => u.email === email && u.password === password);
 
-app.post('/register', (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
-  if (users.find(u => u.username === username)) {
-    return res.status(400).json({ error: 'Username already exists' });
-  }
-  users.push({ username, password });
-  res.json({ message: 'Registration successful' });
-});
-
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
-
-  const user = users.find(u => u.username === username && u.password === password);
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-
-  req.session.user = { username };
-  res.json({ message: 'Login successful', username });
-});
-
-app.post('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.json({ message: 'Logged out successfully' });
-  });
-});
-
-function authMiddleware(req, res, next) {
-  if (req.session.user) next();
-  else res.status(401).json({ error: 'Unauthorized' });
-}
-
-// --- EMAIL ROUTES ---
-
-app.post('/send-email', authMiddleware, (req, res) => {
-  const { to, subject, text, from } = req.body;
-  if (!to || !subject || !text) return res.status(400).json({ error: 'Missing required fields' });
-
-  const mailOptions = {
-    from: from || 'info@growzin.com',
-    to,
-    subject,
-    text
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error('❌ Error sending email:', error);
-      return res.status(500).send('Failed to send email');
-    }
-
-    const email = {
-      id: Date.now(),
-      sender: mailOptions.from,
-      recipient: to,
-      subject,
-      content: text,
-      status: 'sent',
-      sentTime: new Date().toISOString(),
-      opened: false
-    };
-
-    emails.push(email);
-    saveEmails();
-
-    console.log('✅ Email sent immediately:', info.response);
-    res.json({ message: 'Email sent successfully' });
-  });
-});
-
-app.post('/schedule-email', authMiddleware, (req, res) => {
-  const { sender, recipient, subject, content, scheduledTime } = req.body;
-  if (!recipient || !subject || !content || !scheduledTime) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
-  const email = {
-    id: Date.now(),
-    sender: sender || 'info@growzin.com',
-    recipient,
-    subject,
-    content,
-    status: 'pending',
-    scheduledTime,
-    opened: false
-  };
-
-  emails.push(email);
-  saveEmails();
-
-  console.log(`📅 Email scheduled for ${scheduledTime} to ${recipient}`);
-  res.json({ message: 'Email scheduled successfully' });
-});
-
-app.get('/emails', authMiddleware, (req, res) => {
-  res.json(emails);
-});
-
-// --- Nodemailer Transporter ---
-const transporter = nodemailer.createTransport({
-  host: 'smtp.hostinger.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: 'info@growzin.com',
-    pass: 'Growzin786#' // Use environment variables in production
+  if (user) {
+    req.session.user = user;
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
 });
 
-// --- Cron job to send scheduled emails every 10 seconds ---
-cron.schedule('*/10 * * * * *', () => {
+// Signup endpoint
+app.post('/api/signup', (req, res) => {
+  const { email, password } = req.body;
+  let users = readJSON(USERS_FILE);
+
+  if (users.find(u => u.email === email)) {
+    return res.status(400).json({ success: false, message: 'User already exists' });
+  }
+
+  const newUser = { email, password };
+  users.push(newUser);
+  writeJSON(USERS_FILE, users);
+  res.json({ success: true });
+});
+
+// Email scheduling endpoint
+app.post('/api/schedule', (req, res) => {
+  const { to, subject, text, scheduleTime } = req.body;
+
+  const emails = readJSON(EMAILS_FILE);
+  const newEmail = { to, subject, text, scheduleTime };
+  emails.push(newEmail);
+  writeJSON(EMAILS_FILE, emails);
+
+  res.json({ success: true });
+});
+
+// Email sending logic
+cron.schedule('* * * * *', () => {
+  const emails = readJSON(EMAILS_FILE);
   const now = new Date();
-  emails.forEach((email, index) => {
-    if (email.status === 'pending' && new Date(email.scheduledTime) <= now) {
-      const mailOptions = {
-        from: email.sender || 'info@growzin.com',
-        to: email.recipient,
-        subject: email.subject,
-        text: email.content,
-      };
 
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error(`❌ Failed to send scheduled email to ${email.recipient}:`, error);
-          return;
-        }
-
-        emails[index].status = 'sent';
-        emails[index].sentTime = new Date().toISOString();
-        emails[index].opened = false;
-        saveEmails();
-
-        console.log(`✅ Scheduled email sent to ${email.recipient}:`, info.response);
-      });
-    }
+  const pending = emails.filter(email => {
+    const scheduled = new Date(email.scheduleTime);
+    return scheduled <= now;
   });
+
+  if (pending.length > 0) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'your_email@gmail.com',      // replace with your Gmail
+        pass: 'your_app_password'          // use App Password, not Gmail password
+      }
+    });
+
+    pending.forEach(email => {
+      transporter.sendMail({
+        from: 'your_email@gmail.com',
+        to: email.to,
+        subject: email.subject,
+        text: email.text
+      }, (error, info) => {
+        if (error) {
+          console.error('Email failed:', error);
+        } else {
+          console.log('Email sent:', info.response);
+        }
+      });
+    });
+
+    const remaining = emails.filter(email => {
+      const scheduled = new Date(email.scheduleTime);
+      return scheduled > now;
+    });
+
+    writeJSON(EMAILS_FILE, remaining);
+  }
 });
 
-// --- Serve frontend properly ---
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Fallback route for SPA routing
+// Serve frontend on all other routes (Render fix)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- Start server ---
-const PORT = process.env.PORT || 3000;
+// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
