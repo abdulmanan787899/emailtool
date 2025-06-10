@@ -16,6 +16,9 @@ function createNotificationElement() {
   return div;
 }
 
+// Base URL for backend
+const BASE_URL = 'https://email-scheduler-7ekc.onrender.com';
+
 // LOGIN PAGE LOGIC
 if (document.getElementById('login-btn')) {
   document.getElementById('login-btn').addEventListener('click', async () => {
@@ -24,7 +27,7 @@ if (document.getElementById('login-btn')) {
     if (!username || !password) return showNotification('Please fill in both fields', false);
 
     try {
-      const res = await fetch('/login', {
+      const res = await fetch(`${BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -56,7 +59,7 @@ if (document.getElementById('signup-btn')) {
     if (!username || !password) return showNotification('Please fill in both fields', false);
 
     try {
-      const res = await fetch('/register', {
+      const res = await fetch(`${BASE_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -92,7 +95,7 @@ if (document.getElementById('schedule-email-btn')) {
     }
 
     try {
-      const res = await fetch('/schedule-email', {
+      const res = await fetch(`${BASE_URL}/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -121,7 +124,7 @@ if (document.getElementById('schedule-email-btn')) {
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
     try {
-      const res = await fetch('/logout', { method: 'POST', credentials: 'include' });
+      const res = await fetch(`${BASE_URL}/logout`, { method: 'POST', credentials: 'include' });
       if (res.ok) {
         window.location.href = 'login.html';
       }
