@@ -7,16 +7,19 @@ const nodemailer = require('nodemailer');
 const cron = require('node-cron');
 
 const app = express();
+
+// CORS for local development and deployment
 app.use(cors({
-  origin: 'http://localhost:3000',  // adjust frontend origin
+  origin: ['http://localhost:3000', 'https://email-scheduler-7ekc.onrender.com'],
   credentials: true
 }));
+
 app.use(express.json());
-app.use(express.static('public')); // serve your frontend and pixel.png
+app.use(express.static('public')); // Serve frontend + assets
 
 // --- SESSION SETUP ---
 app.use(session({
-  secret: 'supersecretkey123!',  // change to a strong secret in production
+  secret: 'supersecretkey123!',
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 60 * 60 * 1000 } // 1 hour
@@ -35,7 +38,6 @@ function saveEmails() {
 
 // --- AUTH ROUTES ---
 
-// Register
 app.post('/register', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
@@ -46,7 +48,6 @@ app.post('/register', (req, res) => {
   res.json({ message: 'Registration successful' });
 });
 
-// Login
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
@@ -59,14 +60,12 @@ app.post('/login', (req, res) => {
   res.json({ message: 'Login successful', username });
 });
 
-// Logout
 app.post('/logout', (req, res) => {
   req.session.destroy(() => {
     res.json({ message: 'Logged out successfully' });
   });
 });
 
-// Middleware to protect routes
 function authMiddleware(req, res, next) {
   if (req.session.user) next();
   else res.status(401).json({ error: 'Unauthorized' });
@@ -74,7 +73,6 @@ function authMiddleware(req, res, next) {
 
 // --- EMAIL ROUTES ---
 
-// Send email immediately (protected)
 app.post('/send-email', authMiddleware, (req, res) => {
   const { to, subject, text, from } = req.body;
 
@@ -112,7 +110,6 @@ app.post('/send-email', authMiddleware, (req, res) => {
   });
 });
 
-// Schedule email (protected)
 app.post('/schedule-email', authMiddleware, (req, res) => {
   const { sender, recipient, subject, content, scheduledTime } = req.body;
 
@@ -138,7 +135,6 @@ app.post('/schedule-email', authMiddleware, (req, res) => {
   res.json({ message: 'Email scheduled successfully' });
 });
 
-// Get all emails (protected)
 app.get('/emails', authMiddleware, (req, res) => {
   res.json(emails);
 });
@@ -150,7 +146,7 @@ const transporter = nodemailer.createTransport({
   secure: true,
   auth: {
     user: 'info@growzin.com',
-    pass: 'Growzin786#' // Use env var in prod
+    pass: 'Growzin786#' // IMPORTANT: use .env in production
   }
 });
 
@@ -184,6 +180,8 @@ cron.schedule('*/10 * * * * *', () => {
   });
 });
 
-app.listen(3000, () => {
-  console.log('🚀 Server running at http://localhost:3000');
+// ✅ FINAL LINE — supports local and deployment
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
