@@ -95,7 +95,7 @@ if (document.getElementById('schedule-email-btn')) {
     }
 
     try {
-      const res = await fetch(`${BASE_URL}/schedule`, {
+      const res = await fetch(`${BASE_URL}/schedule-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -109,7 +109,6 @@ if (document.getElementById('schedule-email-btn')) {
       const data = await res.json();
       if (res.ok) {
         showNotification('Email scheduled successfully!');
-        // Clear inputs
         document.getElementById('email-to').value = '';
         document.getElementById('email-subject').value = '';
         document.getElementById('email-content').value = '';
@@ -124,7 +123,10 @@ if (document.getElementById('schedule-email-btn')) {
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
     try {
-      const res = await fetch(`${BASE_URL}/logout`, { method: 'POST', credentials: 'include' });
+      const res = await fetch(`${BASE_URL}/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
       if (res.ok) {
         window.location.href = 'login.html';
       }
