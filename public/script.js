@@ -16,8 +16,8 @@ function createNotificationElement() {
   return div;
 }
 
-// Base URL for backend
-const BASE_URL = 'https://email-scheduler-7ekc.onrender.com';
+// Base URL — use relative paths for flexibility (local or deployed)
+const BASE_URL = '';
 
 // LOGIN PAGE LOGIC
 if (document.getElementById('login-btn')) {
@@ -45,10 +45,13 @@ if (document.getElementById('login-btn')) {
     }
   });
 
-  document.getElementById('go-to-signup').addEventListener('click', e => {
-    e.preventDefault();
-    window.location.href = 'signup.html';
-  });
+  const loginLink = document.getElementById('go-to-signup');
+  if (loginLink) {
+    loginLink.addEventListener('click', e => {
+      e.preventDefault();
+      window.location.href = 'signup.html';
+    });
+  }
 }
 
 // SIGNUP PAGE LOGIC
@@ -76,10 +79,13 @@ if (document.getElementById('signup-btn')) {
     }
   });
 
-  document.getElementById('go-to-login').addEventListener('click', e => {
-    e.preventDefault();
-    window.location.href = 'login.html';
-  });
+  const signupLink = document.getElementById('go-to-login');
+  if (signupLink) {
+    signupLink.addEventListener('click', e => {
+      e.preventDefault();
+      window.location.href = 'login.html';
+    });
+  }
 }
 
 // MAIN APP PAGE LOGIC
@@ -95,15 +101,15 @@ if (document.getElementById('schedule-email-btn')) {
     }
 
     try {
-      const res = await fetch(`${BASE_URL}/schedule-email`, {
+      const res = await fetch(`${BASE_URL}/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          recipient: to,
+          to,
           subject,
-          content,
-          scheduledTime,
+          text: content,
+          time: scheduledTime,
         }),
       });
       const data = await res.json();

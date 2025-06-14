@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
@@ -19,43 +19,43 @@ app.use(session({
   saveUninitialized: true
 }));
 
-// Serve static frontend files (index.html, script.js, etc.)
+// Serve static frontend files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Load scheduled emails from file
+// Load scheduled emails
 const emailDataFile = 'emails.json';
 let scheduledEmails = fs.existsSync(emailDataFile)
   ? JSON.parse(fs.readFileSync(emailDataFile))
   : [];
 
-// Save emails to file
+// Save to file
 function saveEmails() {
   fs.writeFileSync(emailDataFile, JSON.stringify(scheduledEmails, null, 2));
 }
 
-// Email sending function
+// Email sending
 async function sendEmail({ to, subject, text }) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'your_email@gmail.com', // Replace with your email
-      pass: 'your_app_password'     // Replace with your app password
+      user: 'your_email@gmail.com',     // ← Replace with your Gmail address
+      pass: 'your_app_password'         // ← Replace with your Gmail App Password
     }
   });
 
   await transporter.sendMail({
-    from: '"Email Tool" <your_email@gmail.com>',
+    from: '"Email Tool" <your_email@gmail.com>',  // ← Same here
     to,
     subject,
     text
   });
 }
 
-// Schedule email sending
+// Cron job to check and send scheduled emails
 cron.schedule('* * * * *', async () => {
   const now = new Date();
   const toSend = scheduledEmails.filter(e => !e.sent && new Date(e.time) <= now);
-  
+
   for (const email of toSend) {
     try {
       await sendEmail(email);
@@ -69,7 +69,7 @@ cron.schedule('* * * * *', async () => {
   saveEmails();
 });
 
-// API routes
+// API route for scheduling emails
 app.post('/schedule', (req, res) => {
   const { to, subject, text, time } = req.body;
 
@@ -88,7 +88,6 @@ app.get('/emails', (req, res) => {
   res.json(scheduledEmails);
 });
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
