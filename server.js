@@ -12,43 +12,44 @@ const PORT = process.env.PORT || 3000;
 // Middlewares
 app.use(express.json());
 app.use(cors({ origin: '*' }));
-
-// Serve static frontend files from 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Load scheduled emails from a file (temporary until DB is used)
+// Load scheduled emails
 const EMAILS_FILE = 'emails.json';
 let scheduledEmails = [];
 if (fs.existsSync(EMAILS_FILE)) {
   scheduledEmails = JSON.parse(fs.readFileSync(EMAILS_FILE));
 }
 
-// SMTP Transporter
+// Nodemailer Transporter for Hostinger
 const transporter = nodemailer.createTransport({
   host: 'smtp.hostinger.com',
-  port: 465,
-  secure: true,
+  port: 587, // TLS (recommended by Hostinger)
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
   },
   pool: true,
   maxConnections: 5,
   maxMessages: 100
 });
 
-// Helper: Save emails to file
+// Helper: Save to emails.json
 function saveEmails() {
   fs.writeFileSync(EMAILS_FILE, JSON.stringify(scheduledEmails, null, 2));
 }
 
-// Helper: Validate Email
+// Helper: Email format validation
 function isValidEmail(email) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return regex.test(email);
 }
 
-// Schedule cron job to run every 5 minutes
+// Cron: Run every 5 minutes
 cron.schedule('*/5 * * * *', async () => {
   const now = new Date();
   const pending = scheduledEmails.filter(e => !e.sent && new Date(e.date) <= now);
@@ -56,7 +57,7 @@ cron.schedule('*/5 * * * *', async () => {
   for (const email of pending) {
     try {
       await transporter.sendMail({
-        from: process.env.EMAIL_USER,
+        from: `"Your Name" <${process.env.EMAIL_USER}>`,
         to: email.to,
         subject: email.subject,
         text: email.text
@@ -65,18 +66,19 @@ cron.schedule('*/5 * * * *', async () => {
       email.sentAt = new Date().toISOString();
       console.log(`✅ Email sent to ${email.to}`);
     } catch (err) {
-      console.error(`❌ Failed to send email to ${email.to}`, err);
+      console.error(`❌ Failed to send email to ${email.to}:`, err.message || err);
     }
   }
 
   saveEmails();
 });
 
-// API Routes
+// API Endpoints
 app.get('/health', (req, res) => res.send('OK'));
 
 app.post('/schedule', (req, res) => {
   const { to, subject, text, date } = req.body;
+
   if (!to || !subject || !text || !date) {
     return res.status(400).json({ error: 'All fields are required' });
   }
@@ -101,6 +103,7 @@ app.post('/schedule', (req, res) => {
 
   scheduledEmails.push(email);
   saveEmails();
+
   res.status(201).json({ message: 'Email scheduled successfully', email });
 });
 
@@ -108,8 +111,7 @@ app.get('/emails', (req, res) => {
   res.json(scheduledEmails);
 });
 
-// Fallback to serve index.html for any other route (for SPA support, optional)
-// Uncomment if you have client-side routing
+// Optional: SPA fallback
 // app.get('*', (req, res) => {
 //   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 // });
