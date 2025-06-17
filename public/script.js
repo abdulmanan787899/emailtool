@@ -19,8 +19,7 @@ function createNotificationElement() {
 // ✅ Base URL
 const BASE_URL = 'https://email-scheduler-7ekc.onrender.com';
 
-// ✅ Login/signup logic (no change here) ...
-// Your original login/signup code stays as-is
+// ✅ Login/signup logic (if any) would be placed here
 
 // ✅ Main app page logic with UTC fix
 if (document.getElementById('schedule-email-btn')) {
@@ -28,7 +27,6 @@ if (document.getElementById('schedule-email-btn')) {
     const to = document.getElementById('email-to').value.trim();
     const subject = document.getElementById('email-subject').value.trim();
     const content = document.getElementById('email-content').value.trim();
-    
     const localTime = document.getElementById('email-schedule-time').value;
     const scheduledTime = new Date(localTime).toISOString(); // convert to UTC
 
@@ -45,10 +43,39 @@ if (document.getElementById('schedule-email-btn')) {
           to,
           subject,
           text: content,
-          date: scheduledTime, // ✅ Fixed key name
+          date: scheduledTime, // ✅ Correct field name
         }),
       });
       const data = await res.json();
       if (res.ok) {
         showNotification('Email scheduled successfully!');
-        document.getElementById('ema
+        document.getElementById('email-to').value = '';
+        document.getElementById('email-subject').value = '';
+        document.getElementById('email-content').value = '';
+        document.getElementById('email-schedule-time').value = '';
+      } else {
+        showNotification(data.error || 'Failed to schedule email', false);
+      }
+    } catch (err) {
+      showNotification('Network error', false);
+    }
+  });
+
+  // ✅ Logout button logic
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (res.ok) {
+          window.location.href = 'login.html';
+        }
+      } catch (err) {
+        showNotification('Logout failed', false);
+      }
+    });
+  }
+}
