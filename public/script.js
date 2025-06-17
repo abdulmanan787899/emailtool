@@ -45,35 +45,10 @@ if (document.getElementById('schedule-email-btn')) {
           to,
           subject,
           text: content,
-          time: scheduledTime,
+          date: scheduledTime, // ✅ Fixed key name
         }),
       });
       const data = await res.json();
       if (res.ok) {
         showNotification('Email scheduled successfully!');
-        document.getElementById('email-to').value = '';
-        document.getElementById('email-subject').value = '';
-        document.getElementById('email-content').value = '';
-        document.getElementById('email-schedule-time').value = '';
-      } else {
-        showNotification(data.error || 'Failed to schedule email', false);
-      }
-    } catch {
-      showNotification('Network error', false);
-    }
-  });
-
-  document.getElementById('logout-btn').addEventListener('click', async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (res.ok) {
-        window.location.href = 'login.html';
-      }
-    } catch {
-      showNotification('Logout failed', false);
-    }
-  });
-}
+        document.getElementById('ema
