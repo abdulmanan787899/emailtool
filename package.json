@@ -1,32 +1,30 @@
 {
   "name": "emailtool",
   "version": "1.0.0",
+  "description": "Email scheduler tool backend with secure environment configuration",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "email",
+    "scheduler",
+    "nodemailer",
+    "cron",
+    "express"
+  ],
+  "author": "Abdul Manan",
+  "license": "MIT",
   "dependencies": {
-    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "express-session": "^1.18.1",
-    "multer": "^2.0.1",
-    "node-cron": "^4.1.0",
-    "node-fetch": "^3.3.2",
-    "node-schedule": "^2.1.1",
-    "nodemailer": "^7.0.3"
+    "dotenv": "^16.4.5",
+    "express": "^5.0.0",
+    "express-session": "^1.17.3",
+    "node-cron": "^3.0.2",
+    "nodemailer": "^6.9.13"
   },
-  "description": "This is a full-stack Email Scheduler tool built with Node.js and a frontend interface. It allows users to schedule emails, manage users, and send emails automatically.",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/abdulmanan787899/emailtool.git"
-  },
-  "bugs": {
-    "url": "https://github.com/abdulmanan787899/emailtool/issues"
-  },
-  "homepage": "https://github.com/abdulmanan787899/emailtool#readme"
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
 }
