@@ -9,47 +9,48 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middlewares
+// Middleware
 app.use(express.json());
 app.use(cors({ origin: '*' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Load scheduled emails
+// Load existing emails
 const EMAILS_FILE = 'emails.json';
 let scheduledEmails = [];
 if (fs.existsSync(EMAILS_FILE)) {
   scheduledEmails = JSON.parse(fs.readFileSync(EMAILS_FILE));
 }
 
-// Nodemailer Transporter for Hostinger
+// ✅ Nodemailer SMTP config (Thunderbird style)
 const transporter = nodemailer.createTransport({
   host: 'smtp.hostinger.com',
-  port: 587, // TLS (recommended by Hostinger)
-  secure: false,
+  port: 587, // STARTTLS (same as Thunderbird)
+  secure: false, // Use STARTTLS instead of SSL
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false
+    ciphers: 'SSLv3', // optional but common in desktop mail clients
+    rejectUnauthorized: false // allow self-signed certs
   },
   pool: true,
   maxConnections: 5,
   maxMessages: 100
 });
 
-// Helper: Save to emails.json
+// Helper to save emails to file
 function saveEmails() {
   fs.writeFileSync(EMAILS_FILE, JSON.stringify(scheduledEmails, null, 2));
 }
 
-// Helper: Email format validation
+// Helper to validate email
 function isValidEmail(email) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return regex.test(email);
 }
 
-// Cron: Run every 5 minutes
+// 🔁 Run every 5 minutes
 cron.schedule('*/5 * * * *', async () => {
   const now = new Date();
   const pending = scheduledEmails.filter(e => !e.sent && new Date(e.date) <= now);
@@ -57,7 +58,7 @@ cron.schedule('*/5 * * * *', async () => {
   for (const email of pending) {
     try {
       await transporter.sendMail({
-        from: `"Your Name" <${process.env.EMAIL_USER}>`,
+        from: `"Growzin" <${process.env.EMAIL_USER}>`,
         to: email.to,
         subject: email.subject,
         text: email.text
@@ -73,7 +74,7 @@ cron.schedule('*/5 * * * *', async () => {
   saveEmails();
 });
 
-// API Endpoints
+// API Routes
 app.get('/health', (req, res) => res.send('OK'));
 
 app.post('/schedule', (req, res) => {
@@ -103,7 +104,6 @@ app.post('/schedule', (req, res) => {
 
   scheduledEmails.push(email);
   saveEmails();
-
   res.status(201).json({ message: 'Email scheduled successfully', email });
 });
 
@@ -111,11 +111,7 @@ app.get('/emails', (req, res) => {
   res.json(scheduledEmails);
 });
 
-// Optional: SPA fallback
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'public', 'index.html'));
-// });
-
+// Launch server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
